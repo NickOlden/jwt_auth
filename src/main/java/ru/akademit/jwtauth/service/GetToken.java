@@ -12,10 +12,8 @@ import ru.akademit.jwtauth.exceptions.GenerateTokenException;
 import ru.akademit.jwtauth.model.SecretData;
 
 import java.lang.reflect.Field;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -35,12 +33,29 @@ public class GetToken<T> {
 
         Class<?> clazz = o.getClass();
         Map<String, Object> claims = new HashMap<>();
+        List<Field> subjects = Arrays.stream(clazz.getFields())
+                .filter(f -> f.isAnnotationPresent(TokenSubject.class))
+                .collect(Collectors.toUnmodifiableList());
+
+        if (subjects.size() == 0) {
+            throw new NullPointerException("At least one field must be marked with the TokenSubject annotation");
+        }
+        if (subjects.size() != 1) {
+            throw new GenerateTokenException("There should be only one field marked with the TokenSubject annotation");
+        }
+
         String subject = null;
+
         for (Field f : clazz.getFields()) {
             try {
                 f.setAccessible(true);
                 if (f.isAnnotationPresent(TokenSubject.class)) {
+                    Class<?> permittedType = String.class;
+                    if (f.getType().isAssignableFrom(permittedType)) {
                         subject = f.get(clazz).toString();
+                    } else {
+                        throw new GenerateTokenException("The field marked with the TokenSubject must be a String");
+                    }
                 }
                 if (!f.isAnnotationPresent(NotForEncrypt.class) && !f.isAnnotationPresent(TokenSubject.class)) {
                     claims.put(f.getName(), f.get(clazz));
@@ -51,26 +66,15 @@ public class GetToken<T> {
             }
         }
 
-        String jwts;
         Date issuedDate = new Date();
         Date expiredDate = new Date(issuedDate.getTime() + this.s.getLiveTime());
-        if (Objects.nonNull(subject)) {
-            jwts = Jwts.builder()
-                    .setClaims(claims)
-                    .setSubject(subject)
-                    .setIssuedAt(issuedDate)
-                    .setExpiration(expiredDate)
-                    .signWith(Keys.secretKeyFor(this.s.getSignatureAlgorithm()), this.s.getSignatureAlgorithm())
-                    .compact();
-        } else {
-            jwts = Jwts.builder()
-                    .setClaims(claims)
-                    .setIssuedAt(issuedDate)
-                    .setExpiration(expiredDate)
-                    .signWith(Keys.secretKeyFor(this.s.getSignatureAlgorithm()), this.s.getSignatureAlgorithm())
-                    .compact();
-        }
 
-        return jwts;
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(subject)
+                .setIssuedAt(issuedDate)
+                .setExpiration(expiredDate)
+                .signWith(Keys.secretKeyFor(this.s.getSignatureAlgorithm()), this.s.getSignatureAlgorithm())
+                .compact();
     }
 }
