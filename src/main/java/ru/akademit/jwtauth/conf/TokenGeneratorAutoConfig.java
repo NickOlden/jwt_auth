@@ -1,6 +1,7 @@
 package ru.akademit.jwtauth.conf;
 
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.impl.crypto.MacProvider;
 import io.jsonwebtoken.security.Keys;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -27,7 +28,7 @@ public class TokenGeneratorAutoConfig {
     @Bean
     @Scope(value = ConfigurableBeanFactory.SCOPE_SINGLETON)
     public Key generateSecretKey() {
-        return Keys.secretKeyFor(ALGORITHM);
+        return MacProvider.generateKey();
     }
 
     /**
