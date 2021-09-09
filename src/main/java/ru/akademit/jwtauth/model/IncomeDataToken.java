@@ -7,19 +7,25 @@ import lombok.experimental.FieldDefaults;
 @Setter
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class IncomeData {
+public class IncomeDataToken {
 
     /**
      * example:
      * [TOKEN]
      * Bearer [TOKEN]
-     * etc.
+     * etc...
      */
     String authenticationString;
 
     /**
+     * If you needed check the prefix in {@link IncomeDataToken#authenticationString}
+     *
      * Optional
-     * If you needed check the prefix in {@link IncomeData#authenticationString}
+     *
+     * example:
+     * Bearer
+     * Basic
+     * etc...
      */
     String authenticationPrefix;
 }

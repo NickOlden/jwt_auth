@@ -4,21 +4,23 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import java.security.Key;
+
 @Getter
 @Setter
 @Builder
 @ToString
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class SecretData {
+public class SecretDataToken {
 
     /**
-     * Phrase to encrypt and decrypt token
+     * Key to encrypt and decrypt token
      */
-    String secretKey;
+    Key secretKey;
 
     /**
      * Token lifetime in ms
-     * example: 60L * 60L * 1000L (one hour) or 900000L (fifteen minutes)
+     * example: 60 * 60 * 1000L (one hour) or 900000L (fifteen minutes)
      */
     Long liveTime;
 

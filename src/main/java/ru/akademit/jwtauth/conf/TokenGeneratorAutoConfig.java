@@ -1,48 +1,56 @@
 package ru.akademit.jwtauth.conf;
 
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.Scope;
-import ru.akademit.jwtauth.model.SecretData;
-import ru.akademit.jwtauth.service.GetToken;
+import ru.akademit.jwtauth.model.SecretDataToken;
+import ru.akademit.jwtauth.service.TokenService;
+
+import java.security.Key;
 
 @Configuration
 @AllArgsConstructor
-@ConditionalOnClass(GetToken.class)
+@ConditionalOnClass(TokenService.class)
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class TokenGeneratorAutoConfig {
-    static final Long lifeTime = 60L * 1000L * 15L;
+    static final Long LIFE_TIME = 1000L * 60 * 15;
+    static final SignatureAlgorithm ALGORITHM = SignatureAlgorithm.HS256;
 
     @Bean
     @Scope(value = ConfigurableBeanFactory.SCOPE_SINGLETON)
-    public String generateSecretKey() {
-        return RandomStringUtils.randomAlphanumeric(30);
+    public Key generateSecretKey() {
+        return Keys.secretKeyFor(ALGORITHM);
     }
 
+    /**
+     * default parameters:
+     * {@link TokenGeneratorAutoConfig#LIFE_TIME} - default token lifetime = 15 minutes
+     * generated with method ${@link TokenGeneratorAutoConfig#generateSecretKey()} secret key (singletone)
+     * {@link SignatureAlgorithm#HS256} - default algorithm for encrypting
+     *
+     * @return {@link SecretDataToken} with default parameters
+     */
     @Bean
     @ConditionalOnMissingBean
-    public SecretData assignSecretData() {
-        System.out.println(lifeTime);
-        return SecretData.builder()
+    public SecretDataToken assignSecretData() {
+        return SecretDataToken.builder()
                 .secretKey(generateSecretKey())
-                .liveTime(lifeTime)
-                .signatureAlgorithm(SignatureAlgorithm.HS256)
+                .liveTime(LIFE_TIME)
+                .signatureAlgorithm(ALGORITHM)
                 .build();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public GetToken<?> getToken(SecretData s) {
-        return new GetToken<>(s);
+    public TokenService<?> getToken(SecretDataToken s) {
+        return new TokenService<>(s);
     }
 }
