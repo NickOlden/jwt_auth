@@ -1,10 +1,7 @@
 package ru.akademit.jwtauth.service;
 
 
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.security.Keys;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -16,15 +13,14 @@ import ru.akademit.jwtauth.model.IncomeDataToken;
 import ru.akademit.jwtauth.model.SecretDataToken;
 
 import java.lang.reflect.Field;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-public class TokenService<T> {
+public class MainTokenService<T> {
 
-    private static final Class<?> permittedType = String.class;
+    static Class<?> permittedType = String.class;
 
     SecretDataToken s;
 
@@ -68,16 +64,16 @@ public class TokenService<T> {
 
     public String updateToken(IncomeDataToken i, T o) {
         if (Objects.isNull(o)) {
-            throw new GenerateTokenException("The object based on which the token will be generated can not be NULL");
+            throw new UpdateTokenException("The object based on which the token will be generated can not be NULL");
         }
         if (Objects.isNull(i)) {
-            throw new GenerateTokenException("Token data can not be NULL");
+            throw new UpdateTokenException("Token data can not be NULL");
         }
 
         Map<String, Object> tokenData = getDataFromToken(i);
 
-        final Date issuedDate = new Date();
-        long exp = Long.parseLong(tokenData.get("exp").toString());
+        Date issuedDate = new Date();
+        Date expiredDate = new Date(issuedDate.getTime() + this.s.getLiveTime());
         String sub = tokenData.get("sub").toString();
 
         tokenData.put("iat", "");
@@ -88,7 +84,7 @@ public class TokenService<T> {
                 .setClaims(tokenData)
                 .setSubject(sub)
                 .setIssuedAt(issuedDate)
-                .setExpiration(new Date(exp * 1000L))
+                .setExpiration(expiredDate)
                 .signWith(s.getSecretKey(), s.getSignatureAlgorithm())
                 .compact();
     }
@@ -114,6 +110,8 @@ public class TokenService<T> {
                     }
                 }
             }
+        } else {
+            return false;
         }
         return true;
     }
@@ -122,11 +120,7 @@ public class TokenService<T> {
         if (Objects.isNull(i)) {
             throw new GenerateTokenException("Token data can not be NULL");
         }
-        return Jwts.parserBuilder()
-                .setSigningKey(s.getSecretKey())
-                .build()
-                .parseClaimsJws(TokenUtils.getToken(i))
-                .getBody();
+        return TokenUtils.getClaimsMap(i, s.getSecretKey());
     }
 
     private String getSubject(T o) {
